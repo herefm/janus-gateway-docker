@@ -55,6 +55,10 @@ services:
 
 This is a Here.fm fork of the dockerfile originally maintained by Canyan.io
 
+Build this and save it:
+
+sudo docker save -o ./herefm-janus-docker.tar herefm/janus-gateway:multistream
+
 ## Building
 
 git clone git@github.com:meetecho/janus-gateway.git
