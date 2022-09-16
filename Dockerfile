@@ -1,3 +1,6 @@
+# To build our janus docker image:
+# sudo docker build -t herefm/janus-gateway:multistream .
+
 FROM debian:bullseye-slim
 
 RUN apt-get -y update && \
@@ -23,10 +26,11 @@ RUN apt-get -y update && \
 		build-essential \
 		wget \
 		git \
-		gtk-doc-tools && \
-	apt-get clean && \
-	rm -rf /var/lib/apt/lists/*
+		gtk-doc-tools \
+		gcc \
+		clang
 
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN cd /tmp && \
 	wget https://github.com/cisco/libsrtp/archive/v2.3.0.tar.gz && \
@@ -36,14 +40,17 @@ RUN cd /tmp && \
 	make shared_library && \
 	make install
 
+RUN apt-get -y update
+RUN apt-get -y install python3 python3-pip python3-setuptools python3-wheel ninja-build
+RUN pip3 install meson
 RUN cd /tmp && \
 	git clone https://gitlab.freedesktop.org/libnice/libnice && \
 	cd libnice && \
-	git checkout 0.1.17 && \
-	./autogen.sh && \
-	./configure --prefix=/usr && \
-	make && \
-	make install
+	git checkout 0.1.18 && \
+	meson builddir && \
+	ninja -C builddir && \
+	ninja -C builddir test && \
+	ninja -C builddir install
 
 COPY . /usr/local/src/janus-gateway
 
@@ -88,10 +95,8 @@ RUN apt-get -y update && \
 COPY --from=0 /usr/lib/libsrtp2.so.1 /usr/lib/libsrtp2.so.1
 RUN ln -s /usr/lib/libsrtp2.so.1 /usr/lib/libsrtp2.so
 
-COPY --from=0 /usr/lib/libnice.la /usr/lib/libnice.la
-COPY --from=0 /usr/lib/libnice.so.10.10.0 /usr/lib/libnice.so.10.10.0
-RUN ln -s /usr/lib/libnice.so.10.10.0 /usr/lib/libnice.so.10
-RUN ln -s /usr/lib/libnice.so.10.10.0 /usr/lib/libnice.so
+COPY --from=0 /usr/local/lib/x86_64-linux-gnu/libnice.so.10 /usr/lib/libnice.so.10.11.0
+COPY --from=0 /usr/local/lib/x86_64-linux-gnu/libnice.so /usr/lib/libnice.so.10
 
 COPY --from=0 /usr/local/bin/janus /usr/local/bin/janus
 COPY --from=0 /usr/local/bin/janus-cfgconv /usr/local/bin/janus-cfgconv
